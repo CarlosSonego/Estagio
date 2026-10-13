@@ -51,3 +51,45 @@ h1 {
     font-weight: 400;
 }
 
+
+
+main table {
+    display: block;
+    overflow: auto;
+    max-width: 100%;
+    max-height: 70vh;          
+
+  
+    font-size: 14px;           
+    line-height: 1.2;
+
+    border-collapse: collapse;
+    margin: 0 auto;
+}
+
+main table caption {
+    font-size: 13px;
+    padding: 4px 0;
+}
+
+main table td {
+    padding: 2px 6px;          
+    white-space: nowrap;       
+    text-align: center;
+    border: 1px solid rgba(128, 128, 128, 0.35);
+}
+
+main table tr:first-child td {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    font-weight: 700;
+    background: #222;          
+    color: #fff;
+}
+
+img {
+    display: block;
+    max-width: 100%;      
+    height: auto;
+}
