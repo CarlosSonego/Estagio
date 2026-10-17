@@ -11,6 +11,8 @@ body {
     line-height: 1.5;
     display: block;
     min-height: 100vh;
+    padding-left: 300px;
+    box-sizing: border-box;
 }
 
 aside {
