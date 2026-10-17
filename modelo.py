@@ -1,13 +1,9 @@
-"""Modelos de Machine Learning do TCC (XGBoost, Random Forest e KNN),
-usados pelo simulador e pela página de resultados.
-"""
 import os
 import threading
 from functools import lru_cache
-
 import joblib
 import matplotlib
-matplotlib.use("Agg")  # backend sem janela: obrigatório em servidor web (requisições rodam em threads)
+matplotlib.use("Agg")  
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -30,13 +26,11 @@ TOP_EXPLICACAO = 4
 JOGOS_RECENTES = 10
 
 PASTA_BASE = os.path.dirname(os.path.abspath(__file__))
-# Os PNGs precisam ficar na pasta static DO FLASK (base/static), não na pasta de onde o servidor foi iniciado.
 PASTA_STATIC = os.path.join(PASTA_BASE, "static")
 ARQUIVO_CACHE = os.path.join(PASTA_BASE, "cache", "modelos.joblib")
-VERSAO_MODELO = 1  # incremente ao mudar hiperparâmetros, features ou a divisão treino/teste
+VERSAO_MODELO = 1 
 
 _trava = threading.Lock()
-
 
 def _caminho_csv():
     for pasta in (os.getcwd(), os.path.dirname(PASTA_BASE), PASTA_BASE):
@@ -67,33 +61,27 @@ def _divisao():
 def _indices_teste():
     return frozenset(_divisao()[1])
 
-
-# ---------------------------------------------------------------- cache em disco
-# Treinar a cada reinício do servidor (ou a cada recarga do modo debug) é o maior custo da aplicação.
-# Os modelos treinados e as métricas ficam salvos em disco e só são refeitos se o CSV ou VERSAO_MODELO mudarem.
 def _assinatura():
     csv = _caminho_csv()
     return (VERSAO_MODELO, os.path.getsize(csv), int(os.path.getmtime(csv)))
-
 
 def _carregar_cache():
     try:
         conteudo = joblib.load(ARQUIVO_CACHE)
         if conteudo.get("assinatura") == _assinatura():
             return conteudo
-    except Exception:  # arquivo inexistente, corrompido ou de outra versão: apenas retreina
+    except Exception:  
         pass
     return None
 
 
 def _salvar_cache(conteudo):
     os.makedirs(os.path.dirname(ARQUIVO_CACHE), exist_ok=True)
-    tmp = f"{ARQUIVO_CACHE}.{os.getpid()}.tmp"  # escrita atômica (vários workers não se atropelam)
+    tmp = f"{ARQUIVO_CACHE}.{os.getpid()}.tmp"  
     joblib.dump(conteudo, tmp)
     os.replace(tmp, ARQUIVO_CACHE)
 
 
-# ---------------------------------------------------------------- treino e métricas
 def _treinar_e_avaliar():
     _, X, y = dados()
     idx_treino, idx_teste = _divisao()
@@ -124,7 +112,6 @@ def _treinar_e_avaliar():
     nomes = [CLASSES[0], CLASSES[1], CLASSES[2]]
 
     def relatorio(pred):
-        # labels fixos + zero_division=0: não quebra se um modelo nunca prever "Empate"
         return classification_report(
             y_teste, pred, labels=[0, 1, 2], target_names=nomes, output_dict=True, zero_division=0
         )
@@ -181,7 +168,7 @@ def _treinar_modelos():
         conteudo = _treinar_e_avaliar()
         _salvar_cache(conteudo)
 
-    explainer = shap.TreeExplainer(conteudo["xgb"])  # barato: não precisa ir para o cache
+    explainer = shap.TreeExplainer(conteudo["xgb"])  
     if retreinou or not _graficos_existem():
         _gerar_graficos_shap(explainer, X.loc[idx_teste])
 
@@ -210,7 +197,6 @@ def _obter_modelo(nome_modelo):
     return modelos[nome_modelo], medias
 
 
-# ---------------------------------------------------------------- listas para o formulário
 @lru_cache(maxsize=1)
 def lista_partidas():
     df = dados()[0]
@@ -292,7 +278,7 @@ def _linha_confronto(time_m, time_v, n=JOGOS_RECENTES):
     O que não for coberto fica na média geral do dataset.
     """
     df, X, _ = dados()
-    casa = df[df["mandante"] == time_m].tail(n)  # o CSV está em ordem cronológica
+    casa = df[df["mandante"] == time_m].tail(n)  
     fora = df[df["visitante"] == time_v].tail(n)
     if casa.empty:
         raise ValueError(f"Não há jogos como mandante de '{time_m}' no dataset.")
@@ -314,7 +300,7 @@ def simular(form):
     if tipo_modelo not in MODELOS_VALIDOS:
         raise ValueError("Modelo inválido.")
 
-    tipo_simulacao = form.get("tipo_simulacao", "partida")  # só ele decide o caminho (os campos escondidos podem vir preenchidos)
+    tipo_simulacao = form.get("tipo_simulacao", "partida")  
 
     if tipo_simulacao == "personalizado":
         time_m = form.get("time_mandante", "")
@@ -329,7 +315,7 @@ def simular(form):
         resultado = prever(_linha_confronto(time_m, time_v), tipo_modelo)
         resultado["partida"] = {
             "mandante": time_m, "visitante": time_v, "data": "Confronto Personalizado",
-            "placar": None, "real": None, "acertou": None,  # não existe resultado real num confronto hipotético
+            "placar": None, "real": None, "acertou": None,  
             "conjunto": "Personalizado",
         }
         return resultado
