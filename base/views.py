@@ -36,13 +36,13 @@ def simulador():
         contexto['times'] = modelo.lista_times()
         if request.method == 'POST':
             contexto['resultado'] = modelo.simular(request.form)
-    except ValueError as erro:          # entrada inválida do usuário
+    except ValueError as erro:          
         contexto['erro'] = str(erro)
         status = 400
-    except FileNotFoundError as erro:   # CSV ausente
+    except FileNotFoundError as erro:   
         contexto['erro'] = str(erro)
         status = 500
-    except Exception:                   # qualquer outra falha: registra e mostra mensagem amigável
+    except Exception:                   
         app.logger.exception("Falha inesperada no simulador")
         contexto['erro'] = "Erro inesperado ao simular. Tente novamente."
         status = 500

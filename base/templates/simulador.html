@@ -98,11 +98,9 @@
                     const personalizado = (tipo === 'personalizado');
                     document.getElementById('bloco_partida').style.display = personalizado ? 'none' : 'block';
                     document.getElementById('bloco_personalizado').style.display = personalizado ? 'block' : 'none';
-                    // campos de um bloco escondido não podem ser enviados no POST (nem bloquear o 'required')
                     document.querySelectorAll('#bloco_partida select').forEach(el => el.disabled = personalizado);
                     document.querySelectorAll('#bloco_personalizado select').forEach(el => el.disabled = !personalizado);
                 }
-                // após o POST a página recarrega: reaplica o modo que estava selecionado
                 document.addEventListener('DOMContentLoaded', function () {
                     mudarModoSimulacao(document.getElementById('tipo_simulacao').value);
                 });
