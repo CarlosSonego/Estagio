@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador - Estágio</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-B/GM4XqrwHnWXNOWMbloTmrYXZg10cakYGmpfsR/bbzQ6JAJI4ihuyADKLnBgrCe" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <aside>
+        <div class="nome">
+            <h2>Predição de Jogos</h2>
+            <span>do Brasileirão</span>
+        </div>
+
+        <nav>
+            <a class="nav-link" href="{{url_for('homepage')}}">Fundamentação Teórica</a>
+            <a class="nav-link" href="{{ url_for( 'resultados' )}}"> Resultados</a>
+            <a class="nav-link active" href="{{ url_for( 'simulador' )}}"> Simulador</a>
+        </nav>
+
+    </aside>
+
+    <main class="corpo">
+        <div class="simulador">
+            <h1>Simulador de Partidas do Brasileirão</h1>
+            <p class="intro">
+                Selecione o modelo de Machine Learning desejado e escolha uma partida do banco de dados para simular o resultado.
+            </p>
+
+            {% if erro %}
+            <div class="aviso mb-4" style="color: #721c24; background-color: #f8d7da; border-color: #f5c6cb;">
+                <strong>Erro:</strong> {{ erro }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('simulador') }}#resultado">
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="modelo" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Selecione o Modelo:</label>
+                    <select name="modelo" id="modelo">
+                        <option value="xgboost" {% if form.get('modelo') == 'xgboost' %}selected{% endif %}>XGBoost</option>
+                        <option value="random_forest" {% if form.get('modelo') == 'random_forest' %}selected{% endif %}>Random Forest</option>
+                        <option value="knn" {% if form.get('modelo') == 'knn' %}selected{% endif %}>K-Nearest Neighbors (KNN)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Tipo de Simulação:</label>
+                    <select name="tipo_simulacao" id="tipo_simulacao" onchange="mudarModoSimulacao(this.value)">
+                        <option value="partida" {% if form.get('tipo_simulacao') == 'partida' %}selected{% endif %}>Partida do Banco de Dados (Teste)</option>
+                        <option value="personalizado" {% if form.get('tipo_simulacao') == 'personalizado' %}selected{% endif %}>Confronto Direto entre Equipas (Média dos últimos 10 jogos)</option>
+                    </select>
+                </div>
+
+                <div id="bloco_partida" style="margin-bottom: 1.5rem;">
+                    <label for="partida" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Selecione a partida:</label>
+                    <select name="partida" id="partida" required>
+                         <option value="">-- Escolha uma partida --</option>
+                            {% for pid, descricao in partidas %}
+                         <option value="{{ pid }}" {% if form.get('partida', '') == pid|string %}selected{% endif %}>{{ descricao }}</option>
+                            {% endfor %}
+                    </select>
+                </div>
+
+                <div id="bloco_personalizado" style="margin-bottom: 1.5rem; display: none;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div>
+                <label for="time_mandante" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Equipa Mandante:</label>
+                <select name="time_mandante" id="time_mandante" required>
+                    <option value="">-- Selecione --</option>
+                    {% for time in times %}
+                    <option value="{{ time }}" {% if form.get('time_mandante') == time %}selected{% endif %}>{{ time }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="time_visitante" style="font-weight: 600; display: block; margin-bottom: 0.5rem;">Equipa Visitante:</label>
+                <select name="time_visitante" id="time_visitante" required>
+                    <option value="">-- Selecione --</option>
+                    {% for time in times %}
+                    <option value="{{ time }}" {% if form.get('time_visitante') == time %}selected{% endif %}>{{ time }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            </div>
+            </div>
+
+                <button type="submit" class="botao">Simular Partida</button>
+            </form>
+
+            <script>
+                function mudarModoSimulacao(tipo) {
+                    const personalizado = (tipo === 'personalizado');
+                    document.getElementById('bloco_partida').style.display = personalizado ? 'none' : 'block';
+                    document.getElementById('bloco_personalizado').style.display = personalizado ? 'block' : 'none';
+                    // campos de um bloco escondido não podem ser enviados no POST (nem bloquear o 'required')
+                    document.querySelectorAll('#bloco_partida select').forEach(el => el.disabled = personalizado);
+                    document.querySelectorAll('#bloco_personalizado select').forEach(el => el.disabled = !personalizado);
+                }
+                // após o POST a página recarrega: reaplica o modo que estava selecionado
+                document.addEventListener('DOMContentLoaded', function () {
+                    mudarModoSimulacao(document.getElementById('tipo_simulacao').value);
+                });
+            </script>
+
+
+            {% if resultado %}
+            <hr style="margin: 3rem 0; border: 0; border-top: 1px solid rgba(13,13,1,0.2);">
+
+            <div class="resultado-secao" id="resultado">
+                <h2>Resultado da Simulação (Modelo: {{ resultado.modelo_usado }})</h2>
+
+                {% if resultado.partida %}
+                <div class="nota mb-3">
+                    <strong>Partida:</strong> {{ resultado.partida.mandante }} x {{ resultado.partida.visitante }} ({{ resultado.partida.data }})<br>
+                    {% if resultado.partida.acertou is not none %}
+                    <strong>Placar Real:</strong> {{ resultado.partida.placar }} | <strong>Resultado Real:</strong> {{ resultado.partida.real }}<br>
+                    <strong>Previsão Correta?</strong> {% if resultado.partida.acertou %}<span style="color: #155724; font-weight: bold;">Sim</span>{% else %}<span style="color: #721c24; font-weight: bold;">Não</span>{% endif %} (Conjunto: {{ resultado.partida.conjunto }})
+                    {% else %}
+                    <em></em>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <p style="font-size: 1.2rem; margin-bottom: 1rem;">
+                    Resultado Previsto: <strong>{{ resultado.previsto }}</strong> ({{ resultado.pct_previsto }}% de probabilidade)
+                </p>
+
+                <div class="mb-4">
+                    <h3>Probabilidades por Classe</h3>
+                    {% for prob in resultado.probabilidades %}
+                    <div class="barra {% if prob.previsto %}destaque{% endif %}">
+                        <span>{{ prob.classe }}</span>
+                        <span class="barra-trilho">
+                            <span class="barra-valor" style="width: {{ prob.pct }}%;"></span>
+                        </span>
+                        <span>{{ prob.texto }}%</span>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                {% if resultado.a_favor or resultado.contra %}
+                <div class="explicacao">
+                    <div>
+                        <h3>Principais atributos a favor (SHAP)</h3>
+                        <ul>
+                            {% for item in resultado.a_favor %}
+                            <li><strong>{{ item.nome }}</strong> (Valor: {{ item.valor }}, Média: {{ item.media }})</li>
+                            {% else %}
+                            <li>Nenhum atributo relevante a favor.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    <div>
+                        <h3>Principais atributos contra (SHAP)</h3>
+                        <ul>
+                            {% for item in resultado.contra %}
+                            <li><strong>{{ item.nome }}</strong> (Valor: {{ item.valor }}, Média: {{ item.media }})</li>
+                            {% else %}
+                            <li>Nenhum atributo relevante contra.</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <p class="rodape">Acurácia geral do modelo {{ resultado.modelo_usado }}: {{ resultado.acuracia }}%</p>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-1a/pXj49ZQ1aHEmrJ+gMw1otqoVsYwlEnlD8mIfY2TV03r20Y0CN7uqx1tQogjPL" crossorigin="anonymous"></script>
+</body>
+</html>

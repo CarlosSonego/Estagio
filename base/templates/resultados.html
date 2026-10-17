@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Resultados - Predição de Jogos do Brasileirão</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-B/GM4XqrwHnWXNOWMbloTmrYXZg10cakYGmpfsR/bbzQ6JAJI4ihuyADKLnBgrCe" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</head>
+
+<body>
+
+    <aside>
+        <div class="nome">
+            <h2>Predição de Jogos</h2>
+            <span>do Brasileirão</span>
+        </div>
+
+        <nav>
+            <a class="nav-link" href="{{ url_for('homepage') }}">Fundamentação Teórica</a>
+            <a class="nav-link active" href="{{ url_for('resultados') }}">Resultados</a>
+            <a class="nav-link" href="{{ url_for('simulador') }}">Simulador</a>
+        </nav>
+    </aside>
+
+    <main class="corpo">
+
+        <h1 style="text-align: left; margin-bottom: 2rem;">Painel de Resultados e Desempenho</h1>
+
+        <div class="topo-cards">
+            <div class="card-metric">
+                <h3>Total de Jogos no Dataset</h3>
+                <div class="valor-principal">{{ stats.total_jogos }}</div>
+                <div class="descricao">Partidas oficiais catalogadas entre 2015 e 2023.</div>
+            </div>
+            <div class="card-metric">
+                <h3>Jogos de Treino e Teste Mapeados</h3>
+                <div class="valor-principal">{{ stats.total_treino }} / {{ stats.total_teste }}</div>
+                <div class="descricao">Treinamento (60%) / Teste (40%).</div>
+            </div>
+        </div>
+
+        <div class="painel-principal">
+
+            <div class="seletor-container">
+                <label for="selectModelo">Selecione o modelo:</label>
+                <select id="selectModelo" onchange="atualizarPainelModelo(this.value)">
+                    <option value="xgboost">XGBoost</option>
+                    <option value="random_forest">Random Forest</option>
+                    <option value="knn">K-Nearest Neighbors (KNN)</option>
+                </select>
+            </div>
+
+            <div class="grid-conteudo">
+
+                <div class="bloco-secao">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 id="tituloModelo" style="font-size: 1.1rem; margin: 0; font-weight: bold;">XGBoost</h3>
+                        <span id="badgeAcuracia" style="background: #0d0d01; color: #FDFBD4; padding: 4px 10px; border-radius: 4px; font-size: 0.85rem; font-weight: bold;">Acurácia: --</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle" style="font-size: 0.85rem; border-color: #0d0d01;">
+                            <thead style="background: #0d0d01; color: #FDFBD4;">
+                                <tr>
+                                    <th>Classe</th>
+                                    <th>Recall</th>
+                                    <th>F1-Score</th>
+                                    <th>Precision</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaMetricasCorpo">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="bloco-secao" style="text-align: center;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 1rem; font-weight: bold; text-align: left;">Comparativo entre a Acurácia dos Modelos</h3>
+                    <div style="position: relative; height: 240px; width: 100%;">
+                        <canvas id="graficoAcuraciaComparativo"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <h2 style="text-align: left; margin-top: 3rem; margin-bottom: 1.5rem;">Interpretabilidade Global (SHAP - XGBoost)</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 2rem; text-align: center;">
+            <div class="bloco-secao">
+                <h3 style="font-size: 1rem; font-weight: bold; margin-bottom: 1rem;">SHAP Bar Chart</h3>
+                <img src="{{ url_for('static', filename='shap_bar_chart.png') }}" alt="SHAP Bar Chart" class="img-fluid" style="border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+            <div class="bloco-secao">
+                <h3 style="font-size: 1rem; font-weight: bold; margin-bottom: 1rem;">SHAP Beeswarm Plot</h3>
+                <img src="{{ url_for('static', filename='shap_beeswarm.png') }}" alt="SHAP Beeswarm" class="img-fluid" style="border-radius: 4px; border: 1px solid #ddd;">
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const dadosModelos = {
+            "xgboost": {
+                "nome": "XGBoost",
+                "acuracia": "{{ '%.1f'|format(metricas['xgboost']['accuracy'] * 100) }}%",
+                "classes": {
+                    "empate": { "recall": "{{ '%.1f'|format(metricas['xgboost']['Empate']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['xgboost']['Empate']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['xgboost']['Empate']['precision'] * 100) }}%" },
+                    "mandante": { "recall": "{{ '%.1f'|format(metricas['xgboost']['Mandante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['xgboost']['Mandante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['xgboost']['Mandante']['precision'] * 100) }}%" },
+                    "visitante": { "recall": "{{ '%.1f'|format(metricas['xgboost']['Visitante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['xgboost']['Visitante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['xgboost']['Visitante']['precision'] * 100) }}%" }
+                }
+            },
+            "random_forest": {
+                "nome": "Random Forest",
+                "acuracia": "{{ '%.1f'|format(metricas['random_forest']['accuracy'] * 100) }}%",
+                "classes": {
+                    "empate": { "recall": "{{ '%.1f'|format(metricas['random_forest']['Empate']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['random_forest']['Empate']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['random_forest']['Empate']['precision'] * 100) }}%" },
+                    "mandante": { "recall": "{{ '%.1f'|format(metricas['random_forest']['Mandante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['random_forest']['Mandante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['random_forest']['Mandante']['precision'] * 100) }}%" },
+                    "visitante": { "recall": "{{ '%.1f'|format(metricas['random_forest']['Visitante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['random_forest']['Visitante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['random_forest']['Visitante']['precision'] * 100) }}%" }
+                }
+            },
+            "knn": {
+                "nome": "K-Nearest Neighbors (KNN)",
+                "acuracia": "{{ '%.1f'|format(metricas['knn']['accuracy'] * 100) }}%",
+                "classes": {
+                    "empate": { "recall": "{{ '%.1f'|format(metricas['knn']['Empate']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['knn']['Empate']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['knn']['Empate']['precision'] * 100) }}%" },
+                    "mandante": { "recall": "{{ '%.1f'|format(metricas['knn']['Mandante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['knn']['Mandante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['knn']['Mandante']['precision'] * 100) }}%" },
+                    "visitante": { "recall": "{{ '%.1f'|format(metricas['knn']['Visitante']['recall'] * 100) }}%", "f1": "{{ '%.1f'|format(metricas['knn']['Visitante']['f1-score'] * 100) }}%", "precision": "{{ '%.1f'|format(metricas['knn']['Visitante']['precision'] * 100) }}%" }
+                }
+            }
+        };
+
+        function atualizarPainelModelo(tipo) {
+            const mod = dadosModelos[tipo];
+            document.getElementById('tituloModelo').innerText = mod.nome;
+            document.getElementById('badgeAcuracia').innerText = "Acurácia: " + mod.acuracia;
+
+            const tbody = document.getElementById('tabelaMetricasCorpo');
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>Empate (0)</strong></td>
+                    <td>${mod.classes.empate.recall}</td>
+                    <td>${mod.classes.empate.f1}</td>
+                    <td>${mod.classes.empate.precision}</td>
+                </tr>
+                <tr>
+                    <td><strong>Mandante (1)</strong></td>
+                    <td>${mod.classes.mandante.recall}</td>
+                    <td>${mod.classes.mandante.f1}</td>
+                    <td>${mod.classes.mandante.precision}</td>
+                </tr>
+                <tr>
+                    <td><strong>Visitante (2)</strong></td>
+                    <td>${mod.classes.visitante.recall}</td>
+                    <td>${mod.classes.visitante.f1}</td>
+                    <td>${mod.classes.visitante.precision}</td>
+                </tr>
+            `;
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            atualizarPainelModelo('xgboost');
+
+            const ctx = document.getElementById('graficoAcuraciaComparativo').getContext('2d');
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['XGBoost', 'Random Forest', 'KNN (k=38)'],
+                    datasets: [{
+                        label: 'Acurácia (%)',
+                        data: [
+                            parseFloat(dadosModelos.xgboost.acuracia),
+                            parseFloat(dadosModelos.random_forest.acuracia),
+                            parseFloat(dadosModelos.knn.acuracia)
+                        ],
+                        backgroundColor: ['#0d0d01', '#8c8962', '#d1cd98'],
+                        borderColor: '#0d0d01',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            min: 50,
+                            max: 70,
+                            ticks: { font: { family: 'Comfortaa', size: 11 } }
+                        },
+                        x: {
+                            ticks: { font: { family: 'Comfortaa', size: 11, weight: 'bold' } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        });
+    </script>
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-1a/pXj49ZQ1aHEmrJ+gMw1otqoVsYwlEnlD8mIfY2TV03r20Y0CN7uqx1tQogjPL" crossorigin="anonymous"></script>
+</body>
+</html>

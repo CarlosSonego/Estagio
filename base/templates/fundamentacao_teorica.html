@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+    <meta charset="UTF-8">
+    <title>Estagio</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@300..700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-B/GM4XqrwHnWXNOWMbloTmrYXZg10cakYGmpfsR/bbzQ6JAJI4ihuyADKLnBgrCe" crossorigin="anonymous">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+
+<body>
+
+
+    <aside>
+        <div class="nome">
+            <h2>Predição de Jogos</h2>
+            <span>do Brasileirão</span>
+        </div>
+
+        <nav>
+            <a class="nav-link active" href="{{url_for('homepage')}}">Fundamentação Teórica</a>
+            <a class="nav-link" href="{{ url_for( 'resultados' )}}"> Resultados</a>
+            <a class="nav-link" href="{{ url_for( 'simulador' )}}"> Simulador</a>
+        </nav>
+
+    </aside>
+
+
+
+    <main class="corpo">
+
+        <h1 style="text-align: left;">
+            Fundamentação Teórica
+        </h1>
+
+        <p style="text-align: justify;">Esta aplicação sintetiza os resultados do Trabalho de Conclusão de Curso (TCC), que utiliza modelos de predição (Random Forest, KNN, XGBoost) para prever
+        o resultado de uma partida do Campeonato Brasileiro de Futebol. Este trabalho utiliza os dados entre 2015 à 2023 para esta previsão.
+        </p>
+
+        <h2 style="text-align: left;">
+            1.Base de Dados
+        </h2>
+
+        <p style="text-align: justify;">O modelo é alimento por dados do campeonato Brasileiro encontrados no <a href="https://www.kaggle.com/datasets/adaoduque/campeonato-brasileiro-de-futebol" style="color: blue;">Kaggle</a> contendo dados de 2003 até 2024, e
+        pelo <a href="https://www.yurimalheiros.com/elo-brasileirao/" style="color: blue;">Elo-Rating</a> das equipes. Os dados passaram por uma fase de extração, cujo teor era encontrar erros nos dados do dataset, sendo por uns dos motivos a seguir:</p>
+
+
+        <ul>
+                    <li style="text-align: justify;"><strong>Tuplas completamente vazias:</strong> Este foi o erro com maior ocorrencia, para resolver isso estas tuplas foram excluidas, no total os anos de 2003 até 2014 foram cortados além do ano de 2024;</li>
+                    <li style="text-align: justify;"><strong>Tuplas com atributo igual a None:</strong> Outro erro bastante comum foi da tupla conter o valor none, para corrigir isso foi utilizado a média desse atributo excluindo o None;</li>
+                    <li style="text-align: justify;"><strong>O atributo chutes no alvo:</strong> No ano de 2015 a 2016 este atributo estava vazio para corrigir isso foi adicionado a mão estes dados utilizando o site da ESPN como base de dados, mesmo utilizando o site da ESPN houve alguns jogos que não foi possível encontrar este valor, para não ficar vazio foi colocado o placar da partida como o total de chutes no alvo.</li>
+        </ul>
+
+        <h2 style="text-align: left;">
+            2.Modo de Avaliação
+        </h2>
+
+        <p style="text-align: justify;">
+            Para a avaliação dos modelos de predição ira ser utilizado a <strong>Acurácia</strong> como principal método avaliativo, em conjunto serão utilizados as seguintes métricas auxiliares:
+        </p>
+
+        <ul>
+                    <li style="text-align: justify;"><strong>Precision:</strong> Se refere ao número de exemplos que o modelo previu como sendo de uma classe e que realmente são, divididos pelo número total de exemplos previstos daquela classe pelo modelo;</li>
+                    <li style="text-align: justify;"><strong>Recall:</strong> Se refere ao número de exemplos que o modelo previu como sendo de uma classe e que realmente são, divididos pelo número total de exemplos previstos daquela classe;</li>
+                    <li style="text-align: justify;"><strong>F1-Score:</strong> O F1 Score é uma métrica que leva em consideração tanto o precision quanto o recall. Utilizando a seguinte fórmula:</li>
+        </ul>
+
+        <div style="font-size: 1.3rem; text-align: center; margin: 1.5rem 0;">
+            \[ \text{Valor F1} = 2 \cdot \frac{\text{Precisão} \cdot \text{Recall}}{\text{Precisão} + \text{Recall}} \]
+        </div>
+
+        <h2 style="text-align: left;">
+            3.Modelos
+        </h2>
+
+        <h4 style="text-align: left;">
+            2.1.Random Forest
+        </h4>
+
+        <p style="text-align: justify;">
+            Random Forest é um algoritmo de machine learning que usa várias árvores de
+            decisão para fazer melhores previsões. Em vez de depender de uma única árvore que pode
+            estar errada, ele utiliza várias árvores com cada uma delas sendo diferente da outra. Sendo
+            assim cada uma dá seu palpite, e a decisão final pode ser feita por votação em casos de
+            classificação ou média em casos de regressão. O modelo utiliza os seguintes parâmetros:
+        </p>
+
+        <img src="{{ url_for('static', filename='rf-parameters.png') }}">
+
+        <h4 style="text-align: left;">
+            2.2.KNN
+        </h4>
+
+        <p style="text-align: justify;">
+            O algoritmo k vizinhos mais próximos, é um classificador de aprendizado supervisionado não paramétrico,
+            que usa a proximidade para fazer classificações ou previsões
+            sobre o agrupamento de um determinado ponto de dados. O modelo utiliza os seguintes parâmetros:
+        </p>
+
+        <img src="{{ url_for('static', filename='knn-parameters.png') }}">
+
+        <h4 style="text-align: left;">
+            2.3.XGBoost
+        </h4>
+
+        <p style="text-align: justify;">
+            O XGBoost é um algoritmo de machine learning baseado em árvores de decisão
+            que utiliza a técnica de gradient boosting, que é um método que combina vários modelos
+            simples sequencialmente para corrigir os erros dos modelos anteriores, sendo capaz de
+            formar um preditor mais forte. O modelo utiliza os seguintes parâmetros:
+        </p>
+
+        <img src="{{ url_for('static', filename='xgb-parameters.png') }}">
+
+        <h2 style="text-align: left;">
+            4.Shap
+        </h2>
+
+        <p style="text-align: justify;">
+            O método SHAP verifica o modelo após o treinamento.
+            Este método atribui a cada entrada uma pontuação numérica que mostra o quanto
+            ela aumentou ou diminuiu uma previsão em comparação com uma linha de base, sendo
+            baseado nos valores de Shapley da teoria dos jogos cooperativos, que é uma forma de
+            distribuir o ganho ou custo total entre vários participantes. Para esta pesquisa o método SHAP
+            foi utilizado somente no Modelo de <strong>maior acurácia.</strong>
+        </p>
+
+    </main>
+
+
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-1a/pXj49ZQ1aHEmrJ+gMw1otqoVsYwlEnlD8mIfY2TV03r20Y0CN7uqx1tQogjPL" crossorigin="anonymous"></script>
+</body>
+</html>
